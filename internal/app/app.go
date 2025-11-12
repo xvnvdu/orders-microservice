@@ -51,10 +51,10 @@ func (a *App) HomeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) GetOrderByIdHandler(w http.ResponseWriter, r *http.Request) {
-	order_uid := r.PathValue("order_uid")
+	orderUID := r.PathValue("order_uid")
 	ctx := context.Background()
 
-	orderData, err := a.repo.GetOrderById(order_uid, ctx, true)
+	orderData, err := a.repo.GetOrderById(orderUID, ctx, true)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Order not found", http.StatusNotFound)
