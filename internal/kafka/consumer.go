@@ -3,6 +3,8 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"log"
 	"net"
 	"orders/internal/generator"
@@ -81,6 +83,11 @@ func StartConsuming(r *kafka.Reader, repo *repo.Repository) {
 	for {
 		m, err := r.FetchMessage(context.Background())
 		if err != nil {
+			// При graceful shutdown ридер закрывается,
+			// эту ошибку пропускаем
+			if errors.Is(err, io.EOF) {
+				break
+			}
 			log.Println("Error reading message:", err)
 			break
 		}

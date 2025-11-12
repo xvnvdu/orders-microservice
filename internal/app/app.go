@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"orders/internal/generator"
@@ -169,24 +170,34 @@ func NewApp(driverName, dataSourceName string) (*App, error) {
 	return app, nil
 }
 
-func (a App) Close() {
+func (a App) Close() error {
+	log.Println("Closing service connections...")
+	var errs []error
+
 	err := a.repo.DB.Close()
 	if err != nil {
-		log.Fatalln("Database connection can't be closed:", err)
+		errs = append(errs, err)
+		log.Println("Database connection can't be closed:", err)
 	}
 
 	err = a.repo.Cache.RedisClient.Close()
 	if err != nil {
-		log.Fatalln("Cache connection can't be closed:", err)
+		errs = append(errs, err)
+		log.Println("Cache connection can't be closed:", err)
 	}
 
 	err = a.kafkaConsumer.Close()
 	if err != nil {
-		log.Fatalln("Kafka stream can't be closed:", err)
+		errs = append(errs, err)
+		log.Println("Kafka stream can't be closed:", err)
 	}
 
 	err = a.kafkaProducer.Close()
 	if err != nil {
-		log.Fatalln("Kafka producer can't be closed:", err)
+		errs = append(errs, err)
+		log.Println("Kafka producer can't be closed:", err)
 	}
+	log.Println("Done!")
+
+	return errors.Join(errs...)
 }

@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
 	"orders/internal/app"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 	"github.com/swaggo/http-swagger"
@@ -27,7 +31,10 @@ func main() {
 	if err != nil {
 		log.Fatalln("Can't create db connection:", err)
 	}
-	defer myApp.Close()
+
+	// Создаем контекст для остановки сервиса при получении сигнала
+	sigCtx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
 	// Отдаем статику
 	staticFileServer := http.FileServer(http.Dir("web/static"))
@@ -45,9 +52,28 @@ func main() {
 	})
 	http.Handle("/docs/", httpSwagger.Handler(httpSwagger.URL("/swagger.yaml")))
 
-	log.Println("Server is running on http://localhost:8080")
+	// Создаем сервер
+	server := &http.Server{
+		Addr: ":8080",
+	}
+	// Запускаем сервер фоном, ListenAndServe - блокирующая функция
+	go func() {
+		log.Println("Server is running on http://localhost:8080")
+		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalln("Server error:", err)
+		}
+	}()
 
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatalln("Can't start the server:", err)
+	// Блокируем завершение главной горутины, ожидая сигнал
+	<-sigCtx.Done()
+	// При получении сигнала останавливаем все процессы далее
+
+	log.Println("Service stopped by a signal: shutting down HTTP server...")
+	if err := server.Shutdown(context.Background()); err != nil {
+		log.Printf("HTTP server shutdown error: %v", err)
+	}
+
+	if err := myApp.Close(); err != nil {
+		log.Println("Service resources close error:", err)
 	}
 }
