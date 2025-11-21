@@ -8,12 +8,12 @@ import (
 	"log"
 	"net/http"
 	"orders/internal/generator"
+	"orders/internal/repository"
 	"os"
 	"strconv"
 
 	c "orders/internal/cache"
 	k "orders/internal/kafka"
-	repo "orders/internal/repository"
 
 	_ "github.com/lib/pq"
 	"github.com/segmentio/kafka-go"
@@ -22,7 +22,7 @@ import (
 type App struct {
 	kafkaConsumer *kafka.Reader
 	kafkaProducer *kafka.Writer
-	repo          *repo.Repository
+	repo          *repository.Repository
 }
 
 func (a *App) HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +148,7 @@ func NewApp(driverName, dataSourceName string) (*App, error) {
 
 	cache := c.NewCache()
 
-	repo, err := repo.NewRepository(driverName, dataSourceName, cache)
+	repo, err := repository.NewRepository(driverName, dataSourceName, cache)
 	if err != nil {
 		log.Fatalln("Error creating new repository:", err)
 	}
