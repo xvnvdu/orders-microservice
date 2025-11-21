@@ -16,8 +16,8 @@ func CreateWriter() *kafka.Writer {
 	return w
 }
 
-func WriteMessage(w *kafka.Writer, ctx context.Context, msg []byte) error {
-	err := w.WriteMessages(ctx,
+func WriteMessage(p MessagesProducer, ctx context.Context, msg []byte) error {
+	err := p.WriteMessages(ctx,
 		kafka.Message{
 			Key:   nil,
 			Value: []byte(msg),

@@ -8,10 +8,9 @@ import (
 	"log"
 	"net"
 	"orders/internal/generator"
+	"orders/internal/repository"
 	"strconv"
 	"time"
-
-	repo "orders/internal/repository"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -78,10 +77,10 @@ func CreateTopic() {
 	log.Printf("Topic %s created successfuly on %s", topic, address)
 }
 
-func StartConsuming(r *kafka.Reader, repo *repo.Repository) {
+func StartConsuming(c MessagesConsumer, repo repository.OrdersRepository) {
 	ctx := context.Background()
 	for {
-		m, err := r.FetchMessage(context.Background())
+		m, err := c.FetchMessage(context.Background())
 		if err != nil {
 			// При graceful shutdown ридер закрывается,
 			// эту ошибку пропускаем
@@ -107,7 +106,7 @@ func StartConsuming(r *kafka.Reader, repo *repo.Repository) {
 			continue
 		}
 
-		if err := r.CommitMessages(ctx, m); err != nil {
+		if err := c.CommitMessages(ctx, m); err != nil {
 			log.Fatalln("Error committing message:", err)
 		}
 		log.Printf("Committed message at topic/partition/offset %v/%v/%v\n",
