@@ -42,13 +42,13 @@ func (c *Cache) LoadInitialOrders(ctx context.Context, latestOrders []*g.Order, 
 		}
 
 		redisKey := order.OrderUID
-		err = c.AddToCache(ctx, redisKey, orderJSON)
+		err = c.addToCache(ctx, redisKey, orderJSON)
 		if err != nil {
 			log.Printf("Error adding order with uid %s\n", redisKey)
 			continue
 		}
 
-		err = c.UpdateLRU(ctx, redisKey)
+		err = c.updateLRU(ctx, redisKey)
 		if err != nil {
 			log.Printf("Error updating LRU with order with uid %s\n", redisKey)
 			continue
@@ -59,7 +59,7 @@ func (c *Cache) LoadInitialOrders(ctx context.Context, latestOrders []*g.Order, 
 	log.Printf("Cache filled with %d/%d orders, running on redis:6379\n", successfulOrders, cacheCapacity)
 }
 
-func (c *Cache) AddToCache(ctx context.Context, redisKey string, orderJSON []byte) error {
+func (c *Cache) addToCache(ctx context.Context, redisKey string, orderJSON []byte) error {
 	err := c.RedisClient.Set(ctx, redisKey, orderJSON, 0).Err()
 	if err != nil {
 		log.Println("Error adding order to Redis:", err)
@@ -68,7 +68,7 @@ func (c *Cache) AddToCache(ctx context.Context, redisKey string, orderJSON []byt
 	return nil
 }
 
-func (c *Cache) UpdateLRU(ctx context.Context, uid string) error {
+func (c *Cache) updateLRU(ctx context.Context, uid string) error {
 	zKey := "LRU-orders"
 
 	now := float64(time.Now().UnixMilli())
@@ -96,7 +96,7 @@ func (c *Cache) UpdateLRU(ctx context.Context, uid string) error {
 		currentCapacity--
 
 		lowestScoreUid := members[0].Member.(string)
-		err = c.RemoveFromCache(ctx, lowestScoreUid)
+		err = c.removeFromCache(ctx, lowestScoreUid)
 		if err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func (c *Cache) UpdateLRU(ctx context.Context, uid string) error {
 	return nil
 }
 
-func (c *Cache) RemoveFromCache(ctx context.Context, uid string) error {
+func (c *Cache) removeFromCache(ctx context.Context, uid string) error {
 	err := c.RedisClient.Del(ctx, uid).Err()
 	if err != nil {
 		log.Printf("Error removing order with uid %s from cache: %d\n", uid, err)
@@ -133,7 +133,7 @@ func (c *Cache) GetFromCache(ctx context.Context, uid string) (*g.Order, error) 
 		return nil, err
 	}
 
-	err = c.UpdateLRU(ctx, uid)
+	err = c.updateLRU(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -148,12 +148,12 @@ func (c *Cache) UpdateCache(ctx context.Context, order *g.Order) error {
 	}
 
 	redisKey := order.OrderUID
-	err = c.AddToCache(ctx, redisKey, orderJSON)
+	err = c.addToCache(ctx, redisKey, orderJSON)
 	if err != nil {
 		return err
 	}
 
-	err = c.UpdateLRU(ctx, redisKey)
+	err = c.updateLRU(ctx, redisKey)
 	if err != nil {
 		return err
 	}
