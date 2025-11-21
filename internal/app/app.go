@@ -16,13 +16,13 @@ import (
 	k "orders/internal/kafka"
 
 	_ "github.com/lib/pq"
-	"github.com/segmentio/kafka-go"
 )
 
 type App struct {
-	kafkaConsumer *kafka.Reader
-	kafkaProducer *kafka.Writer
-	repo          *repository.Repository
+	kafkaConsumer k.MessagesConsumer
+	kafkaProducer k.MessagesProducer
+	repo          repository.OrdersRepository
+	cache         c.OrdersCache
 }
 
 func (a *App) HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -174,13 +174,13 @@ func (a App) Close() error {
 	log.Println("Closing service connections...")
 	var errs []error
 
-	err := a.repo.DB.Close()
+	err := a.repo.Close()
 	if err != nil {
 		errs = append(errs, err)
 		log.Println("Database connection can't be closed:", err)
 	}
 
-	err = a.repo.Cache.RedisClient.Close()
+	err = a.cache.Close()
 	if err != nil {
 		errs = append(errs, err)
 		log.Println("Cache connection can't be closed:", err)

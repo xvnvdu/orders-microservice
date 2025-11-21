@@ -12,10 +12,10 @@ import (
 
 type Repository struct {
 	DB    *sql.DB
-	Cache *c.Cache
+	cache c.OrdersCache
 }
 
-func NewRepository(driverName, dataSourceName string, cache *c.Cache) (*Repository, error) {
+func NewRepository(driverName, dataSourceName string, cache c.OrdersCache) (*Repository, error) {
 	db, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func NewRepository(driverName, dataSourceName string, cache *c.Cache) (*Reposito
 	}
 	log.Println("Database connection opened on db:5432")
 
-	return &Repository{DB: db, Cache: cache}, nil
+	return &Repository{DB: db, cache: cache}, nil
 }
 
 func (r *Repository) SaveToDB(orders []*g.Order, ctx context.Context) error {
@@ -120,7 +120,7 @@ func (r *Repository) SaveToDB(orders []*g.Order, ctx context.Context) error {
 			}
 		}
 
-		err = r.Cache.UpdateCache(ctx, order)
+		err = r.cache.UpdateCache(ctx, order)
 		if err != nil {
 			return err
 		}
@@ -132,7 +132,7 @@ func (r *Repository) GetOrderById(order_uid string, ctx context.Context, useCach
 	var orderData *g.Order
 
 	if useCache {
-		orderData, err := r.Cache.GetFromCache(ctx, order_uid)
+		orderData, err := r.cache.GetFromCache(ctx, order_uid)
 		if err != nil {
 			useCache = false
 		} else {
@@ -220,7 +220,7 @@ func (r *Repository) GetOrderById(order_uid string, ctx context.Context, useCach
 			OofShard:          order.OofShard,
 		}
 
-		err = r.Cache.UpdateCache(ctx, orderData)
+		err = r.cache.UpdateCache(ctx, orderData)
 		if err != nil {
 			return nil, err
 		}
