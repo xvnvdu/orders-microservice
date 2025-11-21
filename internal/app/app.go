@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"orders/internal/dependencies"
 	"orders/internal/generator"
 	"orders/internal/repository"
 	"os"
@@ -143,31 +144,24 @@ func (a *App) RandomOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewApp(driverName, dataSourceName string) (*App, error) {
+func NewApp(d *dependencies.Dependencies) *App {
 	ctx := context.Background()
 
-	cache := c.NewCache()
-
-	repo, err := repository.NewRepository(driverName, dataSourceName, cache)
-	if err != nil {
-		log.Fatalln("Error creating new repository:", err)
-	}
-
-	latestOrders, err := repo.GetLatestOrders(ctx, repo.Cache.Capacity)
+	latestOrders, err := d.Repo.GetLatestOrders(ctx, c.CacheCapacity)
 	if err == nil {
-		repo.Cache.LoadInitialOrders(ctx, latestOrders, repo.Cache.Capacity)
+		d.Cache.LoadInitialOrders(ctx, latestOrders, c.CacheCapacity)
 	} else {
 		log.Println("Cache is empty, running on redis:6379")
 	}
 
-	k.CreateTopic()
-	reader := k.CreateReader()
-	writer := k.CreateWriter()
+	go k.StartConsuming(d.KafkaConsumer, d.Repo)
 
-	go k.StartConsuming(reader, repo)
-
-	app := &App{kafkaConsumer: reader, kafkaProducer: writer, repo: repo}
-	return app, nil
+	return &App{
+		kafkaConsumer: d.KafkaConsumer,
+		kafkaProducer: d.KafkaProducer,
+		repo:          d.Repo,
+		cache:         d.Cache,
+	}
 }
 
 func (a App) Close() error {

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"orders/internal/app"
+	"orders/internal/dependencies"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,10 +28,19 @@ func main() {
 		log.Fatalln("DRIVER is not found")
 	}
 
-	myApp, err := app.NewApp(driver, dbURL)
-	if err != nil {
-		log.Fatalln("Can't create db connection:", err)
+	redisURL := os.Getenv("REDIS_CONN_STRING")
+	if redisURL == "" {
+		log.Fatalln("Redis URL is not found")
 	}
+
+	// Создаем внешние зависимости сервиса
+	deps, err := dependencies.InitDependencies(driver, dbURL, redisURL)
+	if err != nil {
+		log.Fatalf("Failed to init dependencies: %s", err)
+	}
+
+	// Передаем зависимости и инициализируем приложение
+	myApp := app.NewApp(deps)
 
 	// Создаем контекст для остановки сервиса при получении сигнала
 	sigCtx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)

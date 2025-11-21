@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -30,7 +31,7 @@ func CreateReader() *kafka.Reader {
 	return r
 }
 
-func CreateTopic() {
+func CreateTopic() error {
 	var conn *kafka.Conn
 	var err error
 	maxRetries := 10
@@ -43,7 +44,7 @@ func CreateTopic() {
 		log.Printf("Error creating Kafka connection (attempt %d/%d): %v", i+1, maxRetries, err)
 
 		if i == maxRetries-1 {
-			log.Fatalln("Failed to connect to Kafka after all attempts.")
+			return fmt.Errorf("Failed to connect to Kafka after all attempts.")
 		}
 
 		time.Sleep(time.Second * 5)
@@ -52,13 +53,13 @@ func CreateTopic() {
 
 	controller, err := conn.Controller()
 	if err != nil {
-		log.Fatalln("Error creating kafka controller:", err)
+		return fmt.Errorf("Error creating kafka controller: %w", err)
 	}
 
 	var controllerConn *kafka.Conn
 	controllerConn, err = kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
 	if err != nil {
-		log.Fatalln("Error creating controlerConn:", err)
+		return fmt.Errorf("Error creating controlerConn: %w", err)
 	}
 	defer controllerConn.Close()
 
@@ -72,9 +73,11 @@ func CreateTopic() {
 
 	err = controllerConn.CreateTopics(topicConfigs...)
 	if err != nil {
-		log.Fatalln("Error creating topic:", err)
+		return fmt.Errorf("%w", err)
 	}
 	log.Printf("Topic %s created successfuly on %s", topic, address)
+
+	return nil
 }
 
 func StartConsuming(c MessagesConsumer, repo repository.OrdersRepository) {

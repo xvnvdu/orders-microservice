@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"os"
 	"time"
 
 	g "orders/internal/generator"
@@ -17,18 +16,16 @@ type Cache struct {
 	Capacity    int32
 }
 
-const cacheCapacity int32 = 200
+const CacheCapacity int32 = 200
 
-func NewCache() *Cache {
-	rURL := os.Getenv("REDIS_CONN_STRING")
-
-	opt, err := redis.ParseURL(rURL)
+func NewCache(redisURL string) (*Cache, error) {
+	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
 		log.Fatalln("Error connecting to redis:", err)
 	}
 
 	rdb := redis.NewClient(opt)
-	return &Cache{redisClient: rdb, Capacity: cacheCapacity}
+	return &Cache{redisClient: rdb, Capacity: CacheCapacity}, nil
 }
 
 func (c *Cache) LoadInitialOrders(ctx context.Context, latestOrders []*g.Order, limit int32) {
@@ -56,7 +53,7 @@ func (c *Cache) LoadInitialOrders(ctx context.Context, latestOrders []*g.Order, 
 
 		successfulOrders++
 	}
-	log.Printf("Cache filled with %d/%d orders, running on redis:6379\n", successfulOrders, cacheCapacity)
+	log.Printf("Cache filled with %d/%d orders, running on redis:6379\n", successfulOrders, CacheCapacity)
 }
 
 func (c *Cache) addToCache(ctx context.Context, redisKey string, orderJSON []byte) error {
@@ -87,7 +84,7 @@ func (c *Cache) updateLRU(ctx context.Context, uid string) error {
 		return err
 	}
 
-	for currentCapacity > int64(cacheCapacity) {
+	for currentCapacity > int64(CacheCapacity) {
 		members, err := c.redisClient.ZPopMin(ctx, zKey, 1).Result()
 		if err != nil {
 			log.Println("Error removing order with lowest score:", err)
