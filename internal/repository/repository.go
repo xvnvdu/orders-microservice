@@ -350,3 +350,11 @@ func (r *Repository) GetLatestOrders(ctx context.Context, limit int32) ([]*g.Ord
 
 	return ordersList, nil
 }
+
+func (r *Repository) Close() error {
+	err := r.DB.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}

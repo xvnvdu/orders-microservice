@@ -159,3 +159,11 @@ func (c *Cache) UpdateCache(ctx context.Context, order *g.Order) error {
 	}
 	return nil
 }
+
+func (c *Cache) Close() error {
+	err := c.RedisClient.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
