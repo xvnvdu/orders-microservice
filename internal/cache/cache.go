@@ -13,7 +13,7 @@ import (
 )
 
 type Cache struct {
-	RedisClient *redis.Client
+	redisClient *redis.Client
 	Capacity    int32
 }
 
@@ -28,7 +28,7 @@ func NewCache() *Cache {
 	}
 
 	rdb := redis.NewClient(opt)
-	return &Cache{RedisClient: rdb, Capacity: cacheCapacity}
+	return &Cache{redisClient: rdb, Capacity: cacheCapacity}
 }
 
 func (c *Cache) LoadInitialOrders(ctx context.Context, latestOrders []*g.Order, limit int32) {
@@ -60,7 +60,7 @@ func (c *Cache) LoadInitialOrders(ctx context.Context, latestOrders []*g.Order, 
 }
 
 func (c *Cache) addToCache(ctx context.Context, redisKey string, orderJSON []byte) error {
-	err := c.RedisClient.Set(ctx, redisKey, orderJSON, 0).Err()
+	err := c.redisClient.Set(ctx, redisKey, orderJSON, 0).Err()
 	if err != nil {
 		log.Println("Error adding order to Redis:", err)
 		return err
@@ -72,7 +72,7 @@ func (c *Cache) updateLRU(ctx context.Context, uid string) error {
 	zKey := "LRU-orders"
 
 	now := float64(time.Now().UnixMilli())
-	err := c.RedisClient.ZAdd(ctx, zKey, redis.Z{
+	err := c.redisClient.ZAdd(ctx, zKey, redis.Z{
 		Member: uid,
 		Score:  now,
 	}).Err()
@@ -81,14 +81,14 @@ func (c *Cache) updateLRU(ctx context.Context, uid string) error {
 		return err
 	}
 
-	currentCapacity, err := c.RedisClient.ZCard(ctx, zKey).Result()
+	currentCapacity, err := c.redisClient.ZCard(ctx, zKey).Result()
 	if err != nil {
 		log.Println("Error getting cache capacity:")
 		return err
 	}
 
 	for currentCapacity > int64(cacheCapacity) {
-		members, err := c.RedisClient.ZPopMin(ctx, zKey, 1).Result()
+		members, err := c.redisClient.ZPopMin(ctx, zKey, 1).Result()
 		if err != nil {
 			log.Println("Error removing order with lowest score:", err)
 			return err
@@ -105,7 +105,7 @@ func (c *Cache) updateLRU(ctx context.Context, uid string) error {
 }
 
 func (c *Cache) removeFromCache(ctx context.Context, uid string) error {
-	err := c.RedisClient.Del(ctx, uid).Err()
+	err := c.redisClient.Del(ctx, uid).Err()
 	if err != nil {
 		log.Printf("Error removing order with uid %s from cache: %d\n", uid, err)
 		return err
@@ -114,7 +114,7 @@ func (c *Cache) removeFromCache(ctx context.Context, uid string) error {
 }
 
 func (c *Cache) GetFromCache(ctx context.Context, uid string) (*g.Order, error) {
-	cmd := c.RedisClient.Get(ctx, uid)
+	cmd := c.redisClient.Get(ctx, uid)
 	if cmd.Err() != nil {
 		log.Println("Can't find cached data for", uid)
 		return nil, cmd.Err()
@@ -161,7 +161,7 @@ func (c *Cache) UpdateCache(ctx context.Context, order *g.Order) error {
 }
 
 func (c *Cache) Close() error {
-	err := c.RedisClient.Close()
+	err := c.redisClient.Close()
 	if err != nil {
 		return err
 	}
