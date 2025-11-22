@@ -1,5 +1,9 @@
 package dependencies
 
+//go:generate mockgen -source=../repository/interfaces.go -destination=../mocks/repository_mock.go -package=mocks
+//go:generate mockgen -source=../cache/interfaces.go -destination=../mocks/cache_mock.go -package=mocks
+//go:generate mockgen -source=../kafka/interfaces.go -destination=../mocks/kafka_mock.go -package=mocks
+
 import (
 	"fmt"
 	c "orders/internal/cache"
