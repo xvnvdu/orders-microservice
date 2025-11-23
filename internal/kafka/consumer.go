@@ -8,10 +8,11 @@ import (
 	"io"
 	"log"
 	"net"
-	"orders/internal/generator"
-	"orders/internal/repository"
 	"strconv"
 	"time"
+
+	"orders/internal/generator"
+	"orders/internal/repository"
 
 	"github.com/segmentio/kafka-go"
 )

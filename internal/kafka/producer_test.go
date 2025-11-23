@@ -3,8 +3,9 @@ package kafka
 import (
 	"context"
 	"errors"
-	"orders/internal/mocks"
 	"testing"
+
+	"orders/internal/mocks"
 
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/assert"

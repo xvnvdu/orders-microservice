@@ -7,11 +7,12 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
+
 	"orders/internal/dependencies"
 	"orders/internal/generator"
 	"orders/internal/repository"
-	"os"
-	"strconv"
 
 	c "orders/internal/cache"
 	k "orders/internal/kafka"

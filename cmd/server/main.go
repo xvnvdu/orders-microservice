@@ -5,14 +5,15 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"orders/internal/app"
-	"orders/internal/dependencies"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/joho/godotenv"
-	"github.com/swaggo/http-swagger"
+	httpSwagger "github.com/swaggo/http-swagger"
+
+	"orders/internal/app"
+	"orders/internal/dependencies"
 )
 
 func main() {

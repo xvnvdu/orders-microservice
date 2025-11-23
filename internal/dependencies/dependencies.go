@@ -6,6 +6,7 @@ package dependencies
 
 import (
 	"fmt"
+
 	c "orders/internal/cache"
 	k "orders/internal/kafka"
 	r "orders/internal/repository"

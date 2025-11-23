@@ -2,8 +2,9 @@ package cache
 
 import (
 	"context"
-	"orders/internal/generator"
 	"testing"
+
+	"orders/internal/generator"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
