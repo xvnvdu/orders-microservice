@@ -104,16 +104,58 @@ func StartConsuming(c MessagesConsumer, repo repository.OrdersRepository) {
 			continue
 		}
 
-		err = repo.SaveToDB(orders, ctx)
-		if err != nil {
-			log.Printf("Failed to save orders from Kafka message: %v\n", err)
-			continue
+		orders = validateOrders(orders)
+
+		if len(orders) > 0 {
+			err = repo.SaveToDB(orders, ctx)
+			if err != nil {
+				log.Printf("Failed to save orders from Kafka message: %v\n", err)
+				continue
+			}
+
+			if err := c.CommitMessages(ctx, m); err != nil {
+				log.Fatalln("Error committing message:", err)
+			}
+			log.Printf("Committed message at topic/partition/offset %v/%v/%v\n",
+				m.Topic, m.Partition, m.Offset)
+		}
+	}
+}
+
+// Валидируем входящие данные
+func validateOrders(orders []*generator.Order) []*generator.Order {
+	var validOrders []*generator.Order
+
+	for _, order := range orders {
+		isValid := true
+
+		// Например, мы не хотим увидеть id заказа пустым
+		if order.OrderUID == "" {
+			log.Println("Invalid order data found: missing OrderUID. Ignoring this order")
+			isValid = false
+		}
+		// Пустой трек-номер тоже не подойдет
+		if order.TrackNumber == "" && isValid {
+			log.Println("Invalid order data found: missing TrackNumber. Ignoring this order")
+			isValid = false
+		}
+		// Или пустой id клиента
+		if order.CustomerID == "" && isValid {
+			log.Println("Invalid order data found: missing CustomerID. Ignoring this order")
+			isValid = false
 		}
 
-		if err := c.CommitMessages(ctx, m); err != nil {
-			log.Fatalln("Error committing message:", err)
+		phone := order.Delivery.Phone
+		// Или, например, мы считаем, что номер телефона, начинающийся с 0 - некорректный
+		if isValid && len(phone) > 0 && phone[0] == '0' {
+			log.Println("Invalid order phone data found: starts with 0. Ignoring this order")
+			isValid = false
 		}
-		log.Printf("Committed message at topic/partition/offset %v/%v/%v\n",
-			m.Topic, m.Partition, m.Offset)
+
+		// Если все ок, добавляем заказ к результату
+		if isValid {
+			validOrders = append(validOrders, order)
+		}
 	}
+	return validOrders
 }
